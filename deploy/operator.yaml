@@ -26,6 +26,36 @@ spec:
               fieldPath: metadata.name
         - name: OPERATOR_NAME
           value: infinispan-operator
+        - name: APP_USER
+          value: APPLICATION_USER
+        - name: APP_PASS
+          value: APPLICATION_PASSWORD
+        - name: MGMT_USER
+          value: ADMIN_USER
+        - name: MGMT_PASS
+          value: ADMIN_PASSWORD
+        - name: ENTRY_POINT_ARGS
+          value: '[]'
+        - name: PROBES
+          value: '{"readiness": "/opt/datagrid/bin/readinessProbe.sh", "liveness":
+            "/opt/datagrid/bin/livenessProbe.sh"}'
+        - name: ADDITIONAL_VARS
+          value: '["IMAGE","NUMBER_OF_INSTANCE"]'
+        - name: VOLUME_MOUNTS
+          value: '[{"MountPath": "/opt/datagrid/standalone/data", "Name": "srv-data"},{"MountPath":
+            "/var/run/secrets/java.io/keystores", "Name": "keystore-volume"},{"MountPath":
+            "/var/run/secrets/openshift.io/serviceaccount", "Name": "services-certs"}]'
+        - name: VOLUME_REFS
+          value: '["srv-data","keystore-volume","services-certs"]'
+        - name: VOLUME_CLAIMS
+          value: '[{"metadata": {"Name": "srv-data"}, "Spec":{"AccessModes": ["ReadWriteOnce"],
+            "Resources": {"Requests": {"storage": "1Gi"}}}}]'
+        - name: IMAGE
+          value: registry.access.redhat.com/jboss-datagrid-7/datagrid73-openshift:latest
+        - name: CLI_CMD
+          value: /opt/datagrid/bin/cli.sh
+        - name: DEFAULT_IMAGE
+          value: registry.access.redhat.com/jboss-datagrid-7/datagrid73-openshift:latest
         image: jboss/infinispan-operator:latest
         imagePullPolicy: Always
         name: infinispan-operator
