@@ -10,6 +10,6 @@ spec:
     plural: infinispans
     singular: infinispan
   scope: Namespaced
-  version: v1
   subresources:
     status: {}
+  version: v1
