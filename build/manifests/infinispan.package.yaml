@@ -1,4 +1,4 @@
 channels:
-- currentCSV: infinispan-operator.v0.2.1
+- currentCSV: datagrid-operator.v1.0.0
   name: alpha
 packageName: infinispan
