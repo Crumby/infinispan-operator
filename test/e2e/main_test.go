@@ -48,11 +48,7 @@ var okd = utilk8s.NewK8sClient(ConfigLocation)
 func TestMain(m *testing.M) {
 	namespace := strings.ToLower(Namespace)
 	okd.NewProject(namespace)
-	stopCh := utilk8s.RunOperator(okd, Namespace, ConfigLocation)
-	setupNamespace()
 	code := m.Run()
-	cleanupNamespace()
-	utilk8s.Cleanup(*okd, Namespace, stopCh)
 	os.Exit(code)
 }
 
