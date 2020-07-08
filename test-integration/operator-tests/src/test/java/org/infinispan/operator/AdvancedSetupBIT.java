@@ -3,32 +3,19 @@ package org.infinispan.operator;
 import java.io.IOException;
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.nio.file.Paths;
-import java.util.Base64;
 import java.util.concurrent.TimeUnit;
 import java.util.function.BooleanSupplier;
 
 import org.apache.http.entity.ContentType;
 import org.assertj.core.api.Assertions;
-import org.infinispan.Caches;
 import org.infinispan.Infinispan;
 import org.infinispan.Infinispans;
 import org.infinispan.TestServer;
-import org.infinispan.client.hotrod.RemoteCache;
-import org.infinispan.client.hotrod.RemoteCacheManager;
-import org.infinispan.client.hotrod.configuration.ClientIntelligence;
-import org.infinispan.client.hotrod.configuration.ConfigurationBuilder;
-import org.infinispan.commons.configuration.XMLStringConfiguration;
 import org.infinispan.identities.Credentials;
-import org.infinispan.util.KeystoreGenerator;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 
-import cz.xtf.builder.builders.RouteBuilder;
-import cz.xtf.builder.builders.SecretBuilder;
 import cz.xtf.client.Http;
 import cz.xtf.client.HttpResponseParser;
 import cz.xtf.core.http.Https;
@@ -36,9 +23,7 @@ import cz.xtf.core.openshift.OpenShift;
 import cz.xtf.core.openshift.OpenShifts;
 import cz.xtf.core.waiting.SimpleWaiter;
 import cz.xtf.junit5.annotations.CleanBeforeAll;
-import io.fabric8.kubernetes.api.model.Secret;
 import io.fabric8.kubernetes.api.model.Service;
-import io.fabric8.openshift.api.model.Route;
 import lombok.extern.slf4j.Slf4j;
 
 /**
@@ -70,8 +55,8 @@ public class AdvancedSetupBIT {
 
    @BeforeAll
    public static void deploy() throws Exception {
-      testServer.deploy();
       infinispan.deploy();
+      testServer.withSecret("tls-secret").deploy();
 
       testServer.waitFor();
       infinispan.waitFor();

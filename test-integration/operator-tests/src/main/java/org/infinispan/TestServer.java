@@ -43,6 +43,12 @@ public class TestServer {
       testApp = resources();
    }
 
+   public TestServer withSecret(String secretName) {
+      testApp.deploymentConfig().podTemplate().addSecretVolume(secretName, secretName).container().addVolumeMount(secretName, "/etc/" + secretName, true);
+
+      return this;
+   }
+
    public void deploy() {
       bm.deploy(build);
       testApp.buildApplication().deploy();

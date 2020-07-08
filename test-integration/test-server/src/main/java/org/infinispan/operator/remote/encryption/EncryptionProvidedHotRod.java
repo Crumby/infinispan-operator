@@ -27,7 +27,7 @@ public class EncryptionProvidedHotRod extends HttpServlet {
          ConfigurationBuilder builder = new ConfigurationBuilder();
          builder.addServer().host(serviceName).port(11222);
          builder.security().authentication().realm("default").serverName("infinispan").username(username).password(password).enable();
-         builder.security().ssl().trustStorePath("/var/run/secrets/kubernetes.io/serviceaccount/service-ca.crt");
+         builder.security().ssl().trustStorePath("/etc/tls-secret/tls.crt");
 
          RemoteCacheManager rcm = new RemoteCacheManager(builder.build());
          RemoteCache<String, String> rc = rcm.administration().getOrCreateCache("hotrod-auth-test", "org.infinispan.DIST_SYNC");
