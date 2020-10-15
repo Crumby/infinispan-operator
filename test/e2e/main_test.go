@@ -43,7 +43,6 @@ var DefaultSpec = ispnv1.Infinispan{
 			CPU:    tconst.CPU,
 			Memory: tconst.Memory,
 		},
-		Image:    tconst.ImageName,
 		Replicas: 1,
 		Expose:   exposeServiceSpec(),
 	},
@@ -58,7 +57,6 @@ var MinimalSpec = ispnv1.Infinispan{
 		Name: tconst.DefaultClusterName,
 	},
 	Spec: ispnv1.InfinispanSpec{
-		Image:    tconst.ImageName,
 		Replicas: 2,
 	},
 }
@@ -468,7 +466,6 @@ func TestExternalService(t *testing.T) {
 				CPU:    tconst.CPU,
 				Memory: tconst.Memory,
 			},
-			Image:    tconst.ImageName,
 			Replicas: 1,
 			Expose:   exposeServiceSpec(),
 		},
@@ -567,7 +564,6 @@ func TestExternalServiceWithAuth(t *testing.T) {
 				CPU:    tconst.CPU,
 				Memory: tconst.Memory,
 			},
-			Image:    tconst.ImageName,
 			Replicas: 1,
 			Expose:   exposeServiceSpec(),
 		},
