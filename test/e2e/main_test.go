@@ -91,13 +91,9 @@ func TestNodeStartup(t *testing.T) {
 	spec.Annotations[ispnv1.TargetLabels] = "my-svc-label"
 	spec.Labels = make(map[string]string)
 	spec.Labels["my-svc-label"] = "my-svc-value"
-	os.Setenv(ispnv1.OperatorTargetLabelsEnvVarName, "{\"operator-svc-label\":\"operator-svc-value\"}")
-	defer os.Unsetenv(ispnv1.OperatorTargetLabelsEnvVarName)
 	spec.Annotations[ispnv1.PodTargetLabels] = "my-pod-label"
 	spec.Labels["my-svc-label"] = "my-svc-value"
 	spec.Labels["my-pod-label"] = "my-pod-value"
-	os.Setenv(ispnv1.OperatorPodTargetLabelsEnvVarName, "{\"operator-pod-label\":\"operator-pod-value\"}")
-	defer os.Unsetenv(ispnv1.OperatorPodTargetLabelsEnvVarName)
 	name := "test-node-startup"
 	spec.ObjectMeta.Name = name
 	// Register it
@@ -109,8 +105,8 @@ func TestNodeStartup(t *testing.T) {
 	testutil.ExpectNoError(kubernetes.Kubernetes.Client.Get(context.TODO(), types.NamespacedName{Name: spec.Name, Namespace: tconst.Namespace}, &ispn))
 	testutil.ExpectNoError(kubernetes.Kubernetes.Client.Get(context.TODO(), types.NamespacedName{Name: spec.Name + "-0", Namespace: tconst.Namespace}, &pod))
 	if pod.Labels["my-pod-label"] != ispn.Labels["my-pod-label"] ||
-		pod.Labels["operator-pod-label"] != "operator-pod-value" ||
-		ispn.Labels["operator-pod-label"] != "operator-pod-value" {
+		pod.Labels["my-pod-label"] != "my-pod-value" ||
+		ispn.Labels["my-pod-label"] != "my-pod-value" {
 		panic("Labels haven't been propagated to pods")
 	}
 
@@ -121,8 +117,8 @@ func TestNodeStartup(t *testing.T) {
 	}
 	for _, svc := range svcList.Items {
 		if svc.Labels["my-svc-label"] != ispn.Labels["my-svc-label"] ||
-			svc.Labels["operator-svc-label"] != "operator-svc-value" ||
-			ispn.Labels["operator-svc-label"] != "operator-svc-value" {
+			svc.Labels["my-svc-label"] != "my-svc-value" ||
+			ispn.Labels["my-svc-label"] != "my-svc-value" {
 			panic("Labels haven't been propagated to services")
 		}
 	}
