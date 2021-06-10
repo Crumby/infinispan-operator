@@ -55,6 +55,9 @@ type TestKubernetes struct {
 	Kubernetes *kube.Kubernetes
 }
 
+// MapperProvider is a function that provides RESTMapper instances
+type MapperProvider func(cfg *rest.Config, opts ...apiutil.DynamicRESTMapperOption) (meta.RESTMapper, error)
+
 func init() {
 	addToScheme(&v1.SchemeBuilder, scheme)
 	addToScheme(&rbacv1.SchemeBuilder, scheme)
@@ -71,10 +74,59 @@ func addToScheme(schemeBuilder *runtime.SchemeBuilder, scheme *runtime.Scheme) {
 	ExpectNoError(err)
 }
 
+// NewKubernetesFromLocalConfig creates a new Kubernetes instance from configuration.
+// The configuration is resolved locally from known locations.
+func NewKubernetesFromLocalConfig(scheme *runtime.Scheme, mapperProvider MapperProvider, ctx string) (*kube.Kubernetes, error) {
+	config := resolveConfig(ctx)
+	config = kube.SetConfigDefaults(config)
+	mapper, err := mapperProvider(config)
+	if err != nil {
+		return nil, err
+	}
+	kubernetes, err := client.New(config, createOptions(scheme, mapper))
+	if err != nil {
+		return nil, err
+	}
+	restClient, err := rest.RESTClientFor(config)
+	if err != nil {
+		return nil, err
+	}
+
+	return &kube.Kubernetes{
+		Client:     kubernetes,
+		RestClient: restClient,
+		RestConfig: config,
+	}, nil
+}
+
+func createOptions(scheme *runtime.Scheme, mapper meta.RESTMapper) client.Options {
+	return client.Options{
+		Scheme: scheme,
+		Mapper: mapper,
+	}
+}
+
+func resolveConfig(ctx string) *rest.Config {
+	internal, _ := rest.InClusterConfig()
+	if internal == nil {
+		kubeConfig := kube.FindKubeConfig()
+		configOvr := clientcmd.ConfigOverrides{}
+		if ctx != "" {
+			configOvr.CurrentContext = ctx
+		}
+		clientConfig := clientcmd.NewNonInteractiveDeferredLoadingClientConfig(
+			&clientcmd.ClientConfigLoadingRules{ExplicitPath: kubeConfig},
+			&configOvr)
+		external, _ := clientConfig.ClientConfig()
+		return external
+	}
+	return internal
+}
+
 // NewTestKubernetes creates a new instance of TestKubernetes
 func NewTestKubernetes(ctx string) *TestKubernetes {
 	mapperProvider := apiutil.NewDynamicRESTMapper
-	kubernetes, err := kube.NewKubernetesFromLocalConfig(scheme, mapperProvider, ctx)
+	kubernetes, err := NewKubernetesFromLocalConfig(scheme, mapperProvider, ctx)
 	ExpectNoError(err)
 	return &TestKubernetes{Kubernetes: kubernetes}
 }
