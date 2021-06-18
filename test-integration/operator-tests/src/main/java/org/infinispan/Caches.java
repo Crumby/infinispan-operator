@@ -23,4 +23,21 @@ public class Caches {
             "    </cache-container>\n" +
             "</infinispan>\n";
    }
+
+   public static String persisted(String name) {
+      return "<infinispan>\n" +
+              "    <cache-container>\n" +
+              "        <distributed-cache owners=\"2\" mode=\"SYNC\" name=\"" + name + "\">\n" +
+              "            <transaction mode=\"NONE\"/>\n" +
+              "            <memory>\n" +
+              "                <off-heap strategy=\"REMOVE\" eviction=\"MEMORY\" size=\"96468992\"/>\n" +
+              "            </memory>\n" +
+              "            <partition-handling when-split=\"ALLOW_READ_WRITES\" merge-policy=\"REMOVE_ALL\"/>\n" +
+              "            <persistence>\n" +
+              "                <file-store />\n" +
+              "            </persistence>\n" +
+              "        </distributed-cache>\n" +
+              "    </cache-container>\n" +
+              "</infinispan>\n";
+   }
 }
