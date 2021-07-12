@@ -161,5 +161,14 @@ public class KeystoreGenerator {
 		public Path keystore;
 		public Path keyPem;
 		public Path certPem;
+
+		public void includeCertInTruststore() {
+			String hostname = keystore.getFileName().toString().replace(".keystore", "");
+
+			System.out.print(hostname);
+
+			// Include in truststore
+			processCall(caDir, "keytool", "-import", "-noprompt", "-keystore", "truststore", "-file", keystore + ".pem", "-alias", hostname, "-storepass", "password");
+		}
 	}
 }

@@ -3,13 +3,16 @@ package org.infinispan.operator;
 import java.io.IOException;
 import java.nio.file.Paths;
 
+import cz.xtf.core.http.Https;
 import io.fabric8.kubernetes.api.model.Affinity;
 import io.fabric8.kubernetes.api.model.apps.StatefulSet;
+import org.apache.http.conn.ssl.DefaultHostnameVerifier;
 import org.apache.http.entity.ContentType;
 import org.assertj.core.api.Assertions;
 import org.infinispan.Caches;
 import org.infinispan.Infinispan;
 import org.infinispan.Infinispans;
+import org.infinispan.TestServer;
 import org.infinispan.client.hotrod.RemoteCache;
 import org.infinispan.client.hotrod.RemoteCacheManager;
 import org.infinispan.client.hotrod.configuration.ClientIntelligence;
@@ -19,19 +22,20 @@ import org.infinispan.commons.configuration.XMLStringConfiguration;
 import org.infinispan.identities.Credentials;
 import org.infinispan.util.CleanUpValidator;
 import org.infinispan.util.KeystoreGenerator;
+import org.infinispan.util.client.Http;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 
 import cz.xtf.builder.builders.SecretBuilder;
-import cz.xtf.client.Http;
-import cz.xtf.core.http.Https;
 import cz.xtf.core.openshift.OpenShift;
 import cz.xtf.core.openshift.OpenShifts;
 import cz.xtf.junit5.annotations.CleanBeforeAll;
 import io.fabric8.kubernetes.api.model.Pod;
 import io.fabric8.kubernetes.api.model.Secret;
 import lombok.extern.slf4j.Slf4j;
+
+import javax.net.ssl.SSLHandshakeException;
 
 /**
  * Compared to MinimalSetupIT this set of tests are running
@@ -44,8 +48,11 @@ import lombok.extern.slf4j.Slf4j;
 class DataGridServiceIT {
    private static final OpenShift openShift = OpenShifts.master();
    private static final Infinispan infinispan = Infinispans.dataGridService();
+   private static final TestServer testServer = TestServer.get();
 
    private static KeystoreGenerator.CertPaths certs;
+   private static KeystoreGenerator.CertPaths clientCerts;
+   private static KeystoreGenerator.CertPaths anotherClientCerts;
    private static String appName;
    private static String hostName;
    private static String user;
@@ -57,6 +64,10 @@ class DataGridServiceIT {
       hostName = openShift.generateHostname(appName + "-external");
 
       certs = KeystoreGenerator.generateCerts(hostName, new String[]{appName});
+      clientCerts = KeystoreGenerator.generateCerts("client");
+      anotherClientCerts = KeystoreGenerator.generateCerts("anotherclient");
+
+      clientCerts.includeCertInTruststore();
 
       Secret encryptionSecret = new SecretBuilder("encryption-secret")
             .addData("keystore.p12", certs.keystore)
@@ -64,25 +75,48 @@ class DataGridServiceIT {
             .addData("password", "password".getBytes()).build();
       Secret authSecret = new SecretBuilder("connect-secret")
             .addData("identities.yaml", Paths.get("src/test/resources/secrets/identities.yaml")).build();
+      Secret clientSecret = new SecretBuilder("client-secret")
+            .addData("keystore", clientCerts.keystore).build();
+      Secret truststoreSecret = new SecretBuilder("truststore-secret")
+            .addData("truststore-password", "password".getBytes())
+            .addData("truststore.p12", clientCerts.truststore).build();
+      Secret clientCertSecret = new SecretBuilder(appName + "-client-cert-secret")
+              .addData("trust.ca", clientCerts.caPem)
+              .addData("trust.cert.client1", clientCerts.certPem)
+              .addData("trust.cert.client2", anotherClientCerts.certPem).build();
 
       openShift.secrets().create(encryptionSecret);
       openShift.secrets().create(authSecret);
+      openShift.secrets().create(clientSecret);
+      openShift.secrets().create(truststoreSecret);
+      openShift.secrets().create(clientCertSecret);
+
+      testServer.withSecret("client-secret");
+      testServer.withSecret("truststore-secret");
 
       infinispan.deploy();
+      testServer.deploy();
+
       infinispan.waitFor();
+      testServer.waitFor();
 
       Credentials developer = infinispan.getCredentials("testuser");
       user = developer.getUsername();
       pass = developer.getPassword();
 
-      Https.doesUrlReturnCode("https://" + hostName, 200).waitFor();
+      Https.doesUrlReturnOK("http://" + testServer.host() + "/ping").waitFor();
+
+//      Http http = Http.get("https://" + hostName).stores(clientCerts.keystore, "password", certs.truststore, "password", new DefaultHostnameVerifier());
+//      http.waiters().code(200).waitFor();
+
+//      Https.doesUrlReturnCode("https://" + hostName, 200).waitFor();
    }
 
 
    /**
     * Ensure that all resource created by Operator in this tests are deleted.
     */
-   @AfterAll
+//   @AfterAll
    static void undeploy() throws IOException {
       infinispan.delete();
 
@@ -149,6 +183,40 @@ class DataGridServiceIT {
       ).isInstanceOf(HotRodClientException.class);
    }
 
+   @Test
+   void hotrodCertTest() {
+      RemoteCache<String, String> rc = getConfiguration(null, null).administration().getOrCreateCache("testcache", new XMLStringConfiguration(Caches.testCache()));
+      rc.put("hotrod-encryption-external", "hotrod-encryption-value");
+      Assertions.assertThat(rc.get("hotrod-encryption-external")).isEqualTo("hotrod-encryption-value");
+   }
+
+   @Test
+   void certAuthTest() throws Exception {
+      // REST
+      Http httpWithKey = Http.get("https://" + hostName).stores(clientCerts.keystore, "password", certs.truststore, "password", new DefaultHostnameVerifier());
+      Http httpWithWrongKey = Http.get("https://" + hostName).stores(anotherClientCerts.keystore, "password", certs.truststore, "password", new DefaultHostnameVerifier());
+      Http httpWithoutKey = Http.get("https://" + hostName).trustStore(certs.truststore, "password", new DefaultHostnameVerifier());
+      try {
+         httpWithKey.execute().code();
+      } catch (SSLHandshakeException e) {
+         log.info("Request with key: {}", e.getMessage());
+      }
+      try {
+         httpWithWrongKey.execute().code();
+      } catch (SSLHandshakeException e) {
+         log.info("Request with wrong key: {}", e.getMessage());
+      }
+      try {
+         httpWithoutKey.execute().code();
+      } catch (SSLHandshakeException e) {
+         log.info("Request without key: {}", e.getMessage());
+      }
+
+      // HOTROD
+      String get = String.format("http://" + testServer.host() + "/hotrod/cert?servicename=%s", appName);
+      Assertions.assertThat(Http.get(get).execute().code()).isEqualTo(200);
+   }
+
    /**
     * Verifies that AntiAffinity settings get propagated to StatefulSet.
     */
@@ -163,11 +231,17 @@ class DataGridServiceIT {
 
    private RemoteCacheManager getConfiguration(String username, String password) {
       String truststore = certs.truststore.toAbsolutePath().toString();
+      String keystore = clientCerts.keystore.toAbsolutePath().toString();
 
       ConfigurationBuilder builder = new ConfigurationBuilder();
       builder.maxRetries(1);
       builder.addServer().host(hostName).port(443);
-      builder.security().ssl().sniHostName(hostName).trustStoreFileName(truststore).trustStorePassword("password".toCharArray());
+      // TODO
+//      builder.security().authentication().saslMechanism("EXTERNAL").realm("default").serverName("infinispan").enable();
+
+      builder.security().ssl().sniHostName(hostName)
+              .trustStoreFileName(truststore).trustStorePassword("password".toCharArray());
+              //.keyStoreFileName(keystore).keyStorePassword("password".toCharArray()).keyStoreType("PCKS12");
       builder.clientIntelligence(ClientIntelligence.BASIC);
 
       if (username != null && password != null) {

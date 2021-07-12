@@ -26,6 +26,8 @@ spec:
     endpointEncryption:
       type: secret
       certSecretName: encryption-secret
+      clientCert: Validate
+#      clientCertSecretName: truststore-secret
     endpointSecretName: connect-secret
   service:
     type: DataGrid
