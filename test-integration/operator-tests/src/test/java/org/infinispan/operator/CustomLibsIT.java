@@ -19,6 +19,7 @@ import java.io.File;
 import java.io.IOException;
 import java.nio.file.Paths;
 import java.util.Collections;
+import java.util.concurrent.TimeUnit;
 
 @Slf4j
 @CleanBeforeAll
@@ -32,7 +33,7 @@ public class CustomLibsIT {
         preparePVC();
         preparePod();
 
-        openShiftWaiters.areExactlyNPodsRunning(1, "app", "infinispan-libs").waitFor();
+        openShiftWaiters.areExactlyNPodsRunning(1, "app", "infinispan-libs").timeout(TimeUnit.MINUTES, 10).waitFor();
 
         buildLibs();
         uploadLibs();
