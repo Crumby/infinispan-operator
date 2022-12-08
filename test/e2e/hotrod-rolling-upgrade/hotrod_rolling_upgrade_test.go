@@ -200,7 +200,10 @@ func TestRollingUpgrade(t *testing.T) {
 			})
 			lastOperand, err := operands().WithRef(ispnPreUpgrade.Status.Operand.Version)
 			tutils.ExpectNoError(err)
-			assertMigration(latestOperand.Image, latestOperand.CVE && lastOperand.UpstreamVersion == latestOperand.UpstreamVersion)
+			fmt.Printf("Last Operand Upstream Version: %s\n", lastOperand.UpstreamVersion)
+			fmt.Printf("Latest Operand Downstream Version, CVE: %s, %t\n", latestOperand.UpstreamVersion, latestOperand.CVE)
+			fmt.Printf("Test result: %t", latestOperand.CVE && lastOperand.UpstreamVersion.EQ(*latestOperand.UpstreamVersion))
+			assertMigration(latestOperand.Image, latestOperand.CVE && lastOperand.UpstreamVersion.EQ(*latestOperand.UpstreamVersion))
 		}
 	}
 }
