@@ -27,10 +27,10 @@ func TestExternalDependenciesHttp(t *testing.T) {
 	if os.Getenv("NO_NGINX") != "" {
 		t.Skip("Skipping test, no Nginx available.")
 	}
-	defer testKube.CleanNamespaceAndLogOnPanic(t, tutils.Namespace)
+	// defer testKube.CleanNamespaceAndLogOnPanic(t, tutils.Namespace)
 
 	webServerConfig := prepareWebServer()
-	defer testKube.DeleteResource(tutils.Namespace, labels.SelectorFromSet(map[string]string{"app": tutils.WebServerName}), webServerConfig, tutils.SinglePodTimeout)
+	// defer testKube.DeleteResource(tutils.Namespace, labels.SelectorFromSet(map[string]string{"app": tutils.WebServerName}), webServerConfig, tutils.SinglePodTimeout)
 
 	namespace := tutils.Namespace
 	spec := tutils.DefaultSpec(t, testKube, func(i *ispnv1.Infinispan) {
