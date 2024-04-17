@@ -6,6 +6,8 @@ import cz.xtf.core.openshift.OpenShiftWaiters;
 import cz.xtf.core.openshift.OpenShifts;
 import cz.xtf.junit5.annotations.CleanBeforeAll;
 import io.fabric8.kubernetes.api.model.*;
+import lombok.extern.slf4j.Slf4j;
+
 import org.apache.maven.it.VerificationException;
 import org.apache.maven.it.Verifier;
 import org.assertj.core.api.Assertions;
@@ -20,6 +22,7 @@ import java.io.IOException;
 import java.nio.file.Paths;
 import java.util.Collections;
 
+@Slf4j
 @CleanBeforeAll
 public class CustomLibsIT {
     private static final OpenShift openShift = OpenShifts.master();
@@ -35,16 +38,16 @@ public class CustomLibsIT {
 
         buildLibs();
         uploadLibs();
+        deletePod();
 
         infinispan.deploy();
         infinispan.waitFor();
     }
 
-    @AfterAll
+    // @AfterAll
     static void undeploy() throws Exception {
         infinispan.delete();
 
-        openShift.pods().withLabel("app", "infinispan-libs").delete();
         openShift.persistentVolumeClaims().withLabel("app", "infinispan-libs").delete();
         openShift.events().delete();
     }
@@ -66,6 +69,11 @@ public class CustomLibsIT {
                 .endResources().endSpec();
 
         openShift.createPersistentVolumeClaim(pvc.build());
+        
+        PersistentVolumeClaim pvcCreated = openShift.persistentVolumeClaims().withName("infinispan-libs").get();
+        log.info("StorageClassName: {}", pvcCreated.getSpec().getStorageClassName());
+        pvcCreated.getSpec().getAccessModes().forEach(am -> log.info("AccessMode: {}", am));
+        
     }
 
     private static void preparePod() {
@@ -121,5 +129,9 @@ public class CustomLibsIT {
         File file = new File("src/test/resources/libs/custom-filter/target/custom-filter-1.0.jar");
 
         openShift.pods().withName("infinispan-libs").file("/tmp/libs/custom-filter-1.0.jar").upload(file.toPath());
+    }
+
+    private static void deletePod() {
+        openShift.pods().withLabel("app", "infinispan-libs").delete();
     }
 }
