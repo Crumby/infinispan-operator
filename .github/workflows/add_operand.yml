@@ -88,7 +88,7 @@ jobs:
           title: 'Operator Infinispan ${{ steps.bump_tag.outputs.new_tag }}'
           body: 'Operator Infinispan ${{ steps.bump_tag.outputs.new_tag }}'
 
-      - name: Enable auto merge
+      - name: Enable auto merge (A comment update)
         if: steps.cpr.outputs.pull-request-operation == 'created'
         uses: peter-evans/enable-pull-request-automerge@v3
         with:
