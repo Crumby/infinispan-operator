@@ -84,8 +84,8 @@ jobs:
           branch: operand-${{ env.VERSION }}
           delete-branch: true
           push-to-fork: ${{ inputs.repository }}
-          title: 'Operator Infinispan ${{ steps.bump_tag.outputs.new_tag }}'
-          body: 'Operator Infinispan ${{ steps.bump_tag.outputs.new_tag }}'
+          title: 'Add Operand ${{ env.VERSION }}'
+          body: 'Add Operand ${{ env.VERSION }}'
 
       - name: Enable auto merge
         if: steps.cpr.outputs.pull-request-operation == 'created'
@@ -93,3 +93,4 @@ jobs:
         with:
           token: ${{ secrets.INFINISPAN_RELEASE_TOKEN }}
           pull-request-number: ${{ steps.cpr.outputs.pull-request-number }}
+          merge-method: rebase
