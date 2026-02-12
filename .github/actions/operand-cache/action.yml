@@ -6,6 +6,10 @@ inputs:
     description: 'Populate cache with operand images if true'
     default: 'false'
     required: false
+  operand:
+    description: 'The FQN of the Operand image to be used. Used to decide whether to add a snapshot image.'
+    required: false
+    type: string
 
 runs:
   using: composite
@@ -15,6 +19,7 @@ runs:
       shell: bash
       env:
         TEST_RELEASE: ${{ contains(github.event.pull_request.labels.*.name, 'test/release') }}
+        CUSTOM_IMAGE: ${{ inputs.operand }}
       run: |
         # Only test a subset of supported Operands
         ./scripts/ci/install_test_operands.sh
