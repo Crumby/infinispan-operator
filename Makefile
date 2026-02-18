@@ -1,4 +1,5 @@
 # Current Operator version
+# A second additional comment to trigger CI
 VERSION ?= $(shell git describe --tags --always --dirty)
 # Default bundle image tag
 IMAGE_TAG_BASE ?= infinispan-operator
