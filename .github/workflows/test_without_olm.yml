@@ -36,6 +36,7 @@ env:
   MAKE_DATADIR_WRITABLE: 'true'
   RUN_SA_OPERATOR: 'true'
   TESTING_LOG_DIR: ${{ github.workspace }}/test/reports
+  TEST_NAME: TestCacheResourcesCleanedUpOnDisable
 
 jobs:
   test:
