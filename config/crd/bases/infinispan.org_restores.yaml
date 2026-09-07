@@ -46,8 +46,9 @@ spec:
                 description: Infinispan cluster name
                 type: string
               container:
-                description: InfinispanContainerSpec specify resource requirements
-                  per container
+                description: |-
+                  ContainerSpec specifies the resource requirements common to every operator-provisioned
+                  container, including the Backup/Restore (zero-capacity) pods.
                 properties:
                   cliExtraJvmOpts:
                     type: string
