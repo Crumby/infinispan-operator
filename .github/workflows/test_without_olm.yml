@@ -36,7 +36,7 @@ permissions:
 env:
   CONFIG_LISTENER_IMAGE: 'localhost:5001/infinispan-operator'
   KUBECONFIG: ${{ github.workspace }}/kind-kube-config.yaml
-  MAKE_DATADIR_WRITABLE: 'true'
+  MAKE_DATADIR_WRITABLE: 'false'
   RUN_SA_OPERATOR: 'true'
   TESTING_LOG_DIR: ${{ github.workspace }}/test/reports
 
@@ -45,6 +45,9 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
+      - name: Dump Environment Variables
+        run: env | sort
+
       - name: Checkout
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
         with:
