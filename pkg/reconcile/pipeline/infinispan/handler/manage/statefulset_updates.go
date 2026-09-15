@@ -135,6 +135,33 @@ func StatefulSetRollingUpgrade(i *ispnv1.Infinispan, ctx pipeline.Context) {
 		updateReasons = append(updateReasons, "topologySpreadConstraints changed")
 	}
 
+	// Determine desirec pod securityContext: defaults with user override. Apply the different
+	// context only if it's non-nil to prevent immediate rollout on Operator upgrade
+	desiredPodContext, err := i.PodSecurityContext()
+	if err != nil {
+		ctx.Requeue(fmt.Errorf("unable to compute pod securityContext: %w", err))
+		return
+	}
+	if i.HasPodSecurityContext() && !reflect.DeepEqual(spec.SecurityContext, desiredPodContext) {
+		spec.SecurityContext = desiredPodContext
+		updateReasons = append(updateReasons, "pod securityContext changed")
+	}
+
+	// Determine desirec container securityContext: defaults with user override. Apply the different
+	// context only if it's non-nil to prevent immediate rollout on Operator upgrade
+	desiredContainerContext, err := i.ContainerSecurityContext()
+	if err != nil {
+		ctx.Requeue(fmt.Errorf("unable to compute container securityContext: %w", err))
+		return
+	}
+	if i.HasContainerSecurityContext() && !reflect.DeepEqual(container.SecurityContext, desiredContainerContext) {
+		container.SecurityContext = desiredContainerContext
+		for idx := range spec.InitContainers {
+			spec.InitContainers[idx].SecurityContext = desiredContainerContext.DeepCopy()
+		}
+		updateReasons = append(updateReasons, "container securityContext changed")
+	}
+
 	if spec.PriorityClassName != i.PriorityClassName() {
 		spec.PriorityClassName = i.PriorityClassName()
 		updateReasons = append(updateReasons, "priorityClassName changed")
@@ -243,12 +270,16 @@ func StatefulSetRollingUpgrade(i *ispnv1.Infinispan, ctx pipeline.Context) {
 	}
 
 	if len(updateReasons) > 0 {
-		// If updating the parameters results in a rolling upgrade, we can update the labels here too
+		// If updating the parameters results in a rolling upgrade, we can update the labels and new defaults here as well
 		if rollingUpgrade {
 			log.Info("StatefulSet spec changed, triggering rolling update", "reason", strings.Join(updateReasons, ", "))
 			labelsForPod := i.PodLabels()
 			labelsForPod[consts.StatefulSetPodLabel] = i.GetStatefulSetName()
 			statefulSet.Spec.Template.Labels = labelsForPod
+
+			// Apply new defaults only when anything else would trigger rollout to prevent auto rollout on Operator upgrade
+			spec.SecurityContext = desiredPodContext
+			container.SecurityContext = desiredContainerContext
 		}
 		err := ctx.Resources().Update(statefulSet, pipeline.RetryOnErr)
 		if err != nil {

@@ -177,8 +177,9 @@ type InfinispanServiceSpec struct {
 	ReplicationFactor int32 `json:"replicationFactor,omitempty"`
 }
 
-// InfinispanContainerSpec specify resource requirements per container
-type InfinispanContainerSpec struct {
+// ContainerSpec specifies the resource requirements common to every operator-provisioned
+// container, including the Backup/Restore (zero-capacity) pods.
+type ContainerSpec struct {
 	// +optional
 	CliExtraJvmOpts string `json:"cliExtraJvmOpts,omitempty"`
 	// +optional
@@ -191,6 +192,15 @@ type InfinispanContainerSpec struct {
 	CPU string `json:"cpu,omitempty"`
 	// +optional
 	Env []corev1.EnvVar `json:"env,omitempty"`
+}
+
+// InfinispanContainerSpec specify resource requirements per container
+type InfinispanContainerSpec struct {
+	ContainerSpec `json:",inline"`
+	// SecurityContext applied to all operator-provisioned containers (server, Gossip Router,
+	// ConfigListener). Deep-merged over the operator's hardened defaults.
+	// +optional
+	SecurityContext *corev1.SecurityContext `json:"securityContext,omitempty"`
 }
 
 // InfinispanSitesLocalSpec enables cross-site replication
@@ -545,6 +555,10 @@ type InfinispanSpec struct {
 	// The name of the ServiceAccount to be used by Infinispan server, GossipRouter, Batch, Backup, and Restore pods
 	// +optional
 	ServiceAccountName string `json:"serviceAccountName,omitempty"`
+	// SecurityContext applied to all operator-provisioned pods (server, Gossip Router,
+	// ConfigListener). Deep-merged over the operator's hardened defaults.
+	// +optional
+	SecurityContext *corev1.PodSecurityContext `json:"securityContext,omitempty"`
 }
 
 // InfinispanUpgradesSpec defines the Infinispan upgrade strategy
